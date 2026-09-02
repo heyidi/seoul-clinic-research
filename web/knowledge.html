@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>医美知识库 · Seoul Beauty</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💆%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/style.css">
+<main>
+  <span class="eyebrow">调研沉淀 · 中英韩对照</span>
+  <h1>医美知识库</h1>
+  <p class="lede muted">从各诊所官网调研中沉淀的产品/设备知识,按类别分组;来源角标可回溯原始出处。</p>
+  <div id="kb"><p class="muted">加载中…</p></div>
+</main>
+<script src="/assets/app.js"></script>
+<script>
+(async () => {
+  await initPage("knowledge");
+  const items = await fetchJSON("/api/knowledge");
+  const kb = document.getElementById("kb");
+  if (!items.length) { kb.innerHTML = '<p class="muted">暂无条目</p>'; return; }
+  const groups = {};
+  for (const k of items) (groups[k.category] ??= []).push(k);
+  // 父子嵌套:父条目=产品家族,子条目=具体型号(如丽珠兰四型盒色),子行紧随父行缩进展示
+  const row = (k, child) => `<tr${child ? ' class="kb-child"' : ""}>
+        <td>${child ? '<span class="kb-branch">└</span> ' : ""}${esc(k.name_en || "")}</td>
+        <td><b>${esc(k.name_zh)}</b></td>
+        <td class="kr-cell">${esc(k.name_ko || "")}</td>
+        <td>${esc(k.origin || "")}</td>
+        <td>${esc(k.summary_zh)}</td>
+        <td>${k.source_url ? srcBadge(k.source_url, k.collected_at) : '<span class="muted">通识</span>'}</td>
+      </tr>`;
+  kb.innerHTML = Object.entries(groups).map(([cat, list]) => {
+    const children = {};
+    for (const k of list) if (k.parent_id) (children[k.parent_id] ??= []).push(k);
+    const body = list.filter((k) => !k.parent_id)
+      .map((k) => row(k, false) + (children[k.id] || []).map((c) => row(c, true)).join(""))
+      .join("");
+    return `
+    <h2>${esc(cat)}</h2>
+    <div class="table-wrap">
+    <table class="grid freeze-2" style="--fz1:5.4rem">
+      <thead><tr><th>英文</th><th>中文(常用叫法)</th><th>韩文</th><th>产地/来历</th><th>说明</th><th>来源</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+    </div>`;
+  }).join("");
+})();
+</script>

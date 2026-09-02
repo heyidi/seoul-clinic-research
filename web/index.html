@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>总览 · Seoul Beauty</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💆%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/style.css">
+<main>
+  <span class="eyebrow">调研总览 · 全部诊所</span>
+  <h1>诊所对比总览</h1>
+  <p class="lede muted">推荐预定指数(0-10)是<b>已采集可溯源信号的汇总</b>,非空口担保——命中的信号都列在"调研理由"里;<b>小红书营销占比过高触发"不推荐"红线并封顶</b>。<b>博客/访客</b>=NAVER 博客评论数 ÷ 访客评论数(全库中位数约 1.5,<b>点数字看逐店解读</b>):韩国博客评多为체험단(体验团)投放,访客评需到店凭证才发得出——<b>中文客通常不走 NAVER,不会留下访客评,所以这两个数量的是韩国本土客群</b>,只作参考、不参与打分。默认按指数排序,点表头可改排序。</p>
+
+  <div class="filterbar" id="filterbar">
+    <span class="fb-label">推荐档位</span>
+    <button class="fb active" data-band="all">全部</button>
+    <button class="fb" data-band="推荐">推荐</button>
+    <button class="fb" data-band="中性">中性</button>
+    <button class="fb" data-band="不推荐">不推荐</button>
+    <span class="fb-sep"></span>
+    <span class="fb-label">面诊风格</span>
+    <button class="fb toggle" data-style="1v1">1v1</button>
+    <button class="fb toggle" data-style="line">流水线</button>
+    <span class="fb-sep"></span>
+    <button class="fb toggle" data-flag="specialist">专科医师</button>
+    <button class="fb toggle" data-flag="revisit">↺复诊多</button>
+    <button class="fb toggle" data-flag="senior">运营5年+</button>
+    <span class="fb-count muted" id="fbcount"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="grid freeze-2" id="tbl" style="--fz1:3.4rem">
+      <thead>
+        <tr>
+          <th data-k="rec_score">推荐指数</th>
+          <th data-k="name">诊所</th>
+          <th data-k="verify">认证 / 资质</th>
+          <th data-k="naver_count">NAVER 评论数</th>
+          <th data-k="blog_count">NAVER 博客</th>
+          <th data-k="ratio" data-unit="倍" title="博客评论数 ÷ 访客评论数。韩国博客评多为체험단(体验团)投放,访客评需实际到店预约/收据核销——比值越高,营销投放相对真实到店越重">博客/访客<span class="kr">倍</span></th>
+          <th data-k="branches">分店</th>
+          <th data-k="opened">运营年限</th>
+          <th>调研理由(信号明细)</th>
+          <th>官方渠道</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</main>
+<script src="/assets/app.js"></script>
+<script>
+(async () => {
+  await initPage("index");
+  const clinics = await fetchJSON("/api/clinics");
+  const nowYear = new Date().getFullYear();
+  const fmtN = (v) => (v == null ? '<span class="muted">未获取</span>' : Number(v).toLocaleString("en-US"));
+  const bandCls = { "推荐": "band-good", "中性": "band-mid", "不推荐": "band-avoid" };
+  // 标签只显示文案,不带 ±,也不解释分数怎么来的(2026-08-20 用户口径:保持神秘)
+  const rtag = (r) => `<span class="rtag ${esc(r.kind)}">${esc(r.text)}</span>`;
+  const REGION_ZH = { "서울": "首尔", "경기": "京畿", "인천": "仁川", "부산": "釜山", "대구": "大邱",
+    "광주": "光州", "대전": "大田", "울산": "蔚山", "세종": "世宗", "강원": "江原", "제주": "济州",
+    "충남": "忠南", "충북": "忠北", "전남": "全南", "전북": "全北", "경남": "庆南", "경북": "庆北" };
+  const regZh = (r) => REGION_ZH[r] || r || "地区未获取";
+
+  // 博客/访客比值的逐店解读。只作提示,不参与打分(2026-08-21 用户口径)。
+  // 关键前提:NAVER 访客评需到店凭证(NAVER 예약/영수증认证/NAVER Pay 结算)才发得出,
+  // 中文客多经中介或直接到店刷卡,不留 NAVER 痕迹 → 访客评量的是**韩国本土客群**,不是真实客流。
+  function ratioNote(v, b) {
+    const r = b / v;
+    const lead = r >= 5 ? "曝光高度依赖博客投放" : r >= 2 ? "博客投放明显多于到店留痕"
+      : r >= 0.8 ? "投放与到店留痕大致均衡(中位数约 1.5)" : r >= 0.2 ? "以到店留痕为主,博客投放少"
+      : "几乎不做博客投放,曝光基本来自到店客";
+    const scale = v >= 2000 ? "本土到店基数厚" : v >= 500 ? "本土到店基数中等" : "本土到店基数薄";
+    return `博客 ${b.toLocaleString("en-US")} ÷ 访客 ${v.toLocaleString("en-US")} = ${r.toFixed(2)} 倍——${lead};${scale}(访客 ${v.toLocaleString("en-US")})。\n`
+      + "韩国博客评多为체험단(体验团)投放;访客评需到店凭证(NAVER 预约/收据认证/NAVER Pay)才发得出。\n"
+      + "⚠ 中文客通常经中介或直接到店刷卡,不走 NAVER,不会留下访客评——所以这两个数反映的是韩国本土客群,不含中文客流量。比值高也可能只是本土到店留痕少,需配着绝对量一起读。";
+  }
+  // 店名里的括号注记(如"明洞店(官网 …;评论极少)")是调研结论,保留但降级为灰色小字
+  const NOTE_RE = /^([^((]+)[((](.+)[))]\s*$/;
+
+  function branchRow(b, asOf) {
+    const raw = b.name_zh || b.name_ko || "";
+    const m = NOTE_RE.exec(raw);
+    const name = m ? m[1].trim() : raw;
+    // 注记里的"评论数未获取"与数字格重复,只留其余部分(地区、官网、口碑提示等)
+    const note = m ? m[2].split(/[,,;;]/).map((s) => s.trim())
+      .filter((s) => s && !/^评论数未获取$/.test(s)).join(" · ") : "";
+    const cell = (n, as) => n == null
+      ? '<span class="muted">未获取</span>'
+      : `${Number(n).toLocaleString("en-US")}${as && as !== asOf ? `<i class="bx-old">截至 ${esc(as)}</i>` : ""}`;
+    return `<li class="bx-row${b.is_primary ? " is-primary" : ""}">
+        <span class="bx-name">${esc(name)}${note ? ` <span class="bx-note">${esc(note)}</span>` : ""}
+          <span class="kr">${esc(b.name_ko || "")}</span></span>
+        <span class="bx-n" data-l="访客">${cell(b.visitor_reviews, b.visitor_as_of)}</span>
+        <span class="bx-n" data-l="博客">${cell(b.blog_reviews, b.blog_as_of)}</span>
+        <span class="bx-lnk">${b.naver_place_url
+          ? `<a href="${esc(b.naver_place_url)}" target="_blank" rel="noopener"><span class="lnk-t">NAVER </span>↗</a>` : ""}</span>
+      </li>`;
+  }
+
+  // 分店面板:本档所在地区常显,其他地区 ≥3 家时压进二级折叠(toxnfill 32 店里 19 家在首尔外)
+  function branchPanel(c) {
+    const list = c.branches || [];
+    if (c.branch_count < 2 || !list.length) return { html: "", hint: "" };
+    const slug = encodeURIComponent(c.slug);
+    const home = (list.find((b) => b.is_primary) || list[0]).region;
+    let main = list.filter((b) => b.region === home);
+    let rest = list.filter((b) => b.region !== home);
+    if (rest.length < 3) { main = list; rest = []; }
+    const dates = list.map((b) => b.visitor_as_of).filter(Boolean).sort();
+    const asOf = dates.length ? dates[dates.length - 1] : null;
+    const byRegion = {};
+    for (const b of rest) byRegion[b.region] = (byRegion[b.region] || 0) + 1;
+    const restSum = Object.entries(byRegion).sort((a, b) => b[1] - a[1])
+      .slice(0, 4).map(([r, n]) => `${regZh(r)} ${n}`).join(" · ");
+    const restNull = rest.length && rest.every((b) => b.visitor_reviews == null);
+    const restBlock = rest.length ? `<details class="bx-rest">
+        <summary>${regZh(home)}以外 ${rest.length} 家(${esc(restSum)}${Object.keys(byRegion).length > 4 ? " 等" : ""})${restNull ? " · 评论数未获取" : ""}</summary>
+        <ul class="bx-list">${rest.map((b) => branchRow(b, asOf)).join("")}</ul>
+      </details>` : "";
+    const hint = rest.length
+      ? `${regZh(home)} ${main.length} 家 · ${regZh(home)}以外 ${rest.length} 家${restNull ? "(评论数未获取)" : ""}`
+      : `${regZh(home)} ${main.length} 家`;
+    return { hint, html: `<tr class="branch-detail" data-slug="${slug}" hidden><td colspan="10"><div class="branch-box">
+      <div class="bx-head">
+        <span class="bx-title">分店明细 · ${rest.length ? `${regZh(home)} ${main.length} 家` : `共 ${main.length} 家`}</span>
+        ${asOf ? `<span class="bx-asof">评论数截至 ${esc(asOf)}</span>` : ""}
+        <button type="button" class="expand-btn bx-close" data-slug="${slug}">收起 ✕</button>
+      </div>
+      <div class="bx-cols"><span>分店</span><span>访客评论</span><span>博客评论</span><span></span></div>
+      <ul class="bx-list">${main.map((b) => branchRow(b, asOf)).join("")}</ul>
+      ${restBlock}
+    </div></td></tr>` };
+  }
+
+  const rows = clinics.map((c) => {
+    const nv = c.latest_ratings.naver_map || {};
+    const nb = c.latest_ratings.naver_blog || {};
+    const spec = c.specialist_level === "specialist" ? '<span class="badge ok">专科医师</span>'
+      : c.specialist_level === "general" ? '<span class="badge">一般医师</span>'
+      : '<span class="badge">资质未标明</span>';
+    const atm = atmosphereOf(c.notes);
+    const atmBadge = atm ? ` <span class="badge ${atm.cls}" title="${esc(atm.full)}">${esc(atm.tag)}</span>` : "";
+    const reasons = (c.rec_reasons || []).map(rtag).join("");
+    // 分店明细行与主行成对生成,排序/筛选时同进同退;默认收起,开合状态记 localStorage
+    // 评论数已在 API 层对齐 ratings 最新快照(主店==主行)
+    const { html: branchDetail, hint: branchHint } = branchPanel(c);
+    return {
+      name: c.name_zh || c.name_en || c.slug,
+      verify: c.verification_status,
+      naver_count: nv.review_count, blog_count: nb.review_count,
+      ratio: nv.review_count && nb.review_count ? nb.review_count / nv.review_count : null,
+      branches: c.branch_count,
+      opened: c.opened_year,
+      rec_score: c.rec_score, rec_band: c.rec_band,
+      specialist_level: c.specialist_level,
+      atmCls: atm ? atm.cls : null,
+      revisit: !!c.revisit_badge,
+      years: c.opened_year ? nowYear - c.opened_year : null,
+      html: `<tr data-slug="${encodeURIComponent(c.slug)}">
+        <td class="rec-cell">
+          <span class="band ${bandCls[c.rec_band] || "band-mid"}">${esc(c.rec_band)}</span>
+          <span class="rec-score">${c.rec_score.toFixed(1)}</span>
+        </td>
+        <td class="name-cell"><a href="/clinic.html?slug=${encodeURIComponent(c.slug)}">${esc(c.name_zh || c.name_en || c.slug)}</a>
+            ${c.name_en ? `<span class="en">${esc(c.name_en)}</span>` : ""}
+            <span class="kr">${esc(c.name_ko || "")}</span></td>
+        <td>${verifyBadge(c.verification_status)} ${spec}${atmBadge}</td>
+        <td class="num">${fmtN(nv.review_count)} ${srcBadge(nv.source_url, nv.collected_at)}${c.revisit_badge ? ' <span class="badge ok" title="NAVER 재방문많은 徽章">↺复诊多</span>' : ""}</td>
+        <td class="num">${fmtN(nb.review_count)} ${srcBadge(nb.source_url, nb.collected_at)}</td>
+        <td class="num">${nv.review_count && nb.review_count
+          ? `<span class="ratio-v" tabindex="0" data-note="${esc(ratioNote(nv.review_count, nb.review_count))}">${(nb.review_count / nv.review_count).toFixed(2)}</span>`
+          : '<span class="muted">未获取</span>'}</td>
+        <td class="num">${branchDetail
+          ? `<button type="button" class="expand-btn" data-slug="${encodeURIComponent(c.slug)}" data-n="${c.branch_count}" title="${esc(branchHint)}">${c.branch_count} 店 ▾</button>`
+          : '<span class="muted">单店</span>'}</td>
+        <td class="num">${c.opened_year ? `${nowYear - c.opened_year >= 1 ? `约 ${nowYear - c.opened_year} 年` : "今年新开"}<span class="kr">${c.opened_year} 开业</span>` : '<span class="muted">未获取</span>'}</td>
+        <td class="reasons-cell">${c.editor_note ? `<div class="editor-line" title="${esc(c.editor_note)}">${fmtInline(c.editor_note)}</div>` : ""}<div class="rtags">${reasons}</div></td>
+        <td>${[["官网", c.official_site], ["NAVER", c.naver_place_url], ["Instagram", c.instagram], ["Facebook", c.facebook]]
+          .filter(([, u]) => u).map(([n, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${n}</a>`).join(" · ") || '<span class="muted">未收录</span>'}</td>
+      </tr>${branchDetail}`,
+    };
+  });
+
+  const tbody = document.querySelector("#tbl tbody");
+  const state = { band: "all", style: null, specialist: false, revisit: false, senior: false, sortK: "rec_score", asc: false };
+
+  function visible() {
+    return rows.filter((r) => {
+      if (state.band !== "all" && r.rec_band !== state.band) return false;
+      if (state.style === "1v1" && r.atmCls !== "atm-1v1") return false;
+      if (state.style === "line" && r.atmCls !== "atm-line") return false;
+      if (state.specialist && r.specialist_level !== "specialist") return false;
+      if (state.revisit && !r.revisit) return false;
+      if (state.senior && !(r.years >= 5)) return false;
+      return true;
+    });
+  }
+  function render() {
+    const list = visible().slice().sort((a, b) => {
+      const [x, y] = [a[state.sortK], b[state.sortK]];
+      if (x == null) return 1;
+      if (y == null) return -1;
+      return (x < y ? -1 : x > y ? 1 : 0) * (state.asc ? 1 : -1);
+    });
+    tbody.innerHTML = list.map((r) => r.html).join("") || '<tr><td colspan="10" class="muted">没有符合筛选条件的诊所</td></tr>';
+    // 重渲染后恢复用户展开过的分店行(HTML 里默认 hidden)
+    for (const slug of opened) setOpen(slug, true);
+    document.getElementById("fbcount").textContent = `共 ${list.length} 家`;
+  }
+
+  // 展开状态跨会话记忆;localStorage 在无痕/被拦时会 throw,整页是一个 IIFE,不兜住就白屏
+  const OPEN_KEY = "sb_branch_open";
+  const opened = new Set((() => {
+    try { return JSON.parse(localStorage.getItem(OPEN_KEY) || "[]"); } catch (e) { return []; }
+  })());
+  function setOpen(slug, open) {
+    const det = tbody.querySelector(`tr.branch-detail[data-slug="${slug}"]`);
+    const btn = tbody.querySelector(`.expand-btn[data-slug="${slug}"]:not(.bx-close)`);
+    if (!det) return;
+    det.hidden = !open;
+    // 按 data-n 重建文案,不做箭头字符替换(replace 找不到字符会静默失效)
+    if (btn) btn.textContent = `${btn.dataset.n} 店 ${open ? "▴" : "▾"}`;
+    if (open) opened.add(slug); else opened.delete(slug);
+    try { localStorage.setItem(OPEN_KEY, JSON.stringify([...opened])); } catch (e) { /* 拦了就只当次有效 */ }
+  }
+  render();
+
+  document.getElementById("filterbar").addEventListener("click", (e) => {
+    const btn = e.target.closest("button.fb");
+    if (!btn) return;
+    if (btn.dataset.band) {
+      state.band = btn.dataset.band;
+      document.querySelectorAll(".fb[data-band]").forEach((b) => b.classList.toggle("active", b === btn));
+    } else if (btn.dataset.style) {
+      // 风格是单选(再点一次取消):1v1 与 流水线 互斥,不构成交集筛选
+      state.style = state.style === btn.dataset.style ? null : btn.dataset.style;
+      document.querySelectorAll(".fb[data-style]").forEach((b) => b.classList.toggle("active", b.dataset.style === state.style));
+    } else if (btn.dataset.flag) {
+      state[btn.dataset.flag] = !state[btn.dataset.flag];
+      btn.classList.toggle("active", state[btn.dataset.flag]);
+    }
+    render();
+  });
+
+  document.querySelectorAll("th[data-k]").forEach((th) => {
+    th.onclick = () => {
+      const k = th.dataset.k;
+      // 同列再点切换升降;换列时数值列默认降序、文本列默认升序
+      state.asc = state.sortK === k ? !state.asc : (k === "name" || k === "verify");
+      state.sortK = k;
+      render();
+    };
+  });
+
+  // 博客/访客比值的解读气泡:.table-wrap 是 overflow-x:auto(纵向同被裁),
+  // 所以气泡挂 body 用 position:fixed,不放单元格里。悬停/键盘聚焦/点击(触屏)三种触发。
+  const pop = document.createElement("div");
+  pop.className = "ratio-pop";
+  pop.hidden = true;
+  document.body.appendChild(pop);
+  let popEl = null, popAt = 0;
+  function showPop(el) {
+    popEl = el;
+    popAt = Date.now();
+    pop.textContent = el.dataset.note || "";
+    pop.hidden = false;
+    const r = el.getBoundingClientRect();
+    const w = Math.min(380, window.innerWidth - 24);
+    pop.style.width = w + "px";
+    pop.style.left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8) + "px";
+    const h = pop.offsetHeight;
+    pop.style.top = (r.bottom + 8 + h > window.innerHeight ? Math.max(8, r.top - h - 8) : r.bottom + 8) + "px";
+  }
+  const hidePop = () => { pop.hidden = true; popEl = null; };
+  // 触屏点一下之后浏览器会合成一串鼠标事件(含 mouseout),照单全收会让气泡刚弹出就没
+  let touched = false;
+  document.addEventListener("touchstart", () => { touched = true; }, true);
+  tbody.addEventListener("mouseover", (e) => { const el = e.target.closest(".ratio-v"); if (el) showPop(el); });
+  tbody.addEventListener("mouseout", (e) => { if (!touched && e.target.closest(".ratio-v")) hidePop(); });
+  tbody.addEventListener("focusin", (e) => { const el = e.target.closest(".ratio-v"); if (el) showPop(el); });
+  tbody.addEventListener("focusout", (e) => { if (!touched && e.target.closest(".ratio-v")) hidePop(); });
+  // 触屏 tap 会先合成 mouseover(已显示)再触发 click——click 若做 toggle 就当场收回去了,
+  // 故 click 只负责"显示",点别处才收
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest(".ratio-v");
+    if (el) return showPop(el);
+    // 触屏聚焦会让浏览器横滚表格,合成的 click 可能落到别的元素上——
+    // 刚显示的 400ms 内不响应"点了外面",否则 tap 刚弹出就被自己关掉
+    if (Date.now() - popAt > 400) hidePop();
+  });
+  // 不在滚动时收起而是跟随重定位——触屏聚焦元素会触发浏览器自动滚动,
+  // 收起写法会让 tap 刚显示就被自己的滚动关掉
+  window.addEventListener("scroll", () => { if (popEl) showPop(popEl); }, true);
+
+  // 分店明细默认收起(数据已随列表接口返回);两个热区:第6列"N 店"按钮 与 面板自带的"收起 ✕"
+  tbody.addEventListener("click", (e) => {
+    const btn = e.target.closest(".expand-btn");
+    if (!btn) return;
+    const slug = btn.dataset.slug;
+    setOpen(slug, btn.classList.contains("bx-close") ? false : !opened.has(slug));
+  });
+})();
+</script>

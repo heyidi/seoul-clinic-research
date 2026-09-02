@@ -1,0 +1,66 @@
+{
+  "clinic": {
+    "slug": "demo-clinic",
+    "name_ko": "데모의원",
+    "name_zh": "演示诊所(虚构,仅供验证环境)",
+    "name_en": "Demo Clinic",
+    "address_ko": "서울 어딘가 123",
+    "address_zh": "首尔某处123(虚构地址)",
+    "verification_status": "unverified",
+    "verification_notes": "【示例】本档案为虚构演示数据,三方互证不适用。真实档案在此写:官网↔NAVER Place↔官方社媒互证依据 + 被排除的同名候选及排除理由。",
+    "notes": "【氛围判定:证据不足以定论】虚构示例:真实档案在此写调研结论,支持【小标题】、①②③枚举、「评论原文引文」三层结构化排版。\n【价格口径】示例:官网价目为含 VAT 口径,活动价须当日预约。",
+    "editor_note": "示例速览:一句话说清'要不要约这家'——真实档案控制在160字内,深翻长文放 notes。",
+    "opened_year": 2020
+  },
+  "treatments": [
+    {"category": "注射类", "treatment_zh": "肉毒素", "variant_zh": "德国西马", "variant_ko": "제오민"}
+  ],
+  "prices": [
+    {
+      "treatment_zh": "肉毒素", "variant_zh": "德国西马",
+      "raw_name_zh": "皱纹肉毒(1部位)·德国西马", "raw_name_ko": "주름 보톡스 1부위 제오민",
+      "price_krw": 39000, "is_event_price": 0,
+      "spec_notes": "正价;VAT 10% 另计;划线原价5.5万写在此处,price_krw 永远取实卖价。",
+      "source_url": "https://example.com/demo-clinic/prices", "collected_at": "2026-01-01"
+    },
+    {
+      "raw_name_zh": "水光+肉毒组合套餐", "raw_name_ko": "물광+보톡스 패키지",
+      "price_krw": 150000, "is_event_price": 1,
+      "spec_notes": "套餐:不指向字典规格(treatment 留空)→ 不进比价轴,仅详情页展示。",
+      "source_url": "https://example.com/demo-clinic/event", "collected_at": "2026-01-01"
+    }
+  ],
+  "ratings": [
+    {"source": "naver_map", "review_count": 321, "source_url": "https://example.com/demo-place", "collected_at": "2026-01-01"}
+  ],
+  "reviews": [
+    {
+      "source": "naver", "sentiment": "negative",
+      "text_original": "대기가 너무 길었어요. (虚构示例)",
+      "text_zh": "等待时间太长了。(虚构示例——差评必须保留,这是本工具链的硬纪律)【示例编者标注:结尾方括号标注会被前端移到 meta 行】",
+      "post_url": "https://example.com/demo-review/1", "collected_at": "2026-01-01"
+    }
+  ],
+  "xhs_posts": [
+    {
+      "url": "https://example.com/demo-xhs/1", "title": "演示帖:某诊所体验(虚构)",
+      "sentiment": "中性", "nature": "素人",
+      "summary_zh": "示例:nature 是受控词表(官方号/KOC系列/店家互动帖/素人/归因存疑/未判定),判定证据写在这里。",
+      "collected_at": "2026-01-01"
+    }
+  ],
+  "doctors": [
+    {
+      "name_ko": "김데모", "name_zh": "金演示", "title": "院长",
+      "is_specialist": "unknown",
+      "credentials_zh": "【示例】官网只写'전문의'无科目 → 档位 unknown 并记录疑点;只有明载「피부과 전문의」等带科目表述才标 specialist。",
+      "source_url": "https://example.com/demo-clinic/doctors", "collected_at": "2026-01-01"
+    }
+  ],
+  "offerings": [
+    {"category": "注射类", "name_ko": "제오민", "name_zh": "德国西马肉毒", "description_zh": "示例:offering 是'这家能做什么'的能力清单,不含价格。", "source_url": "https://example.com/demo-clinic/menu"}
+  ],
+  "archives": [
+    {"file_path": "demo-clinic/pricelist-2026-01-01.png", "description": "示例:价目页截图归档(文件放 data/archive/demo-clinic/)", "source_url": "https://example.com/demo-clinic/prices", "fetched_at": "2026-01-01"}
+  ]
+}

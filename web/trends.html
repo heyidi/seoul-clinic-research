@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>口碑趋势 · Seoul Beauty</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💆%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/style.css">
+<main>
+  <span class="eyebrow">NAVER 口碑增长 · 每日快照</span>
+  <h1>口碑趋势</h1>
+  <p class="lede muted">每天自动抓取各诊所 NAVER <b>访客评</b>(需到店验证 ≈ 真实客流)与<b>博客评</b>(博客软文篇数 ≈ 营销投放)的总数,累积成时间序列。<b>访客增长</b>反映真实到访势头;<b>博客增长远快于访客</b>则更像在猛推软文。点表头可改排序;走势图随天数累积会更完整。</p>
+
+  <div class="filterbar" id="metricbar">
+    <span class="fb-label">排序依据</span>
+    <button class="fb active" data-k="dv">访客增量</button>
+    <button class="fb" data-k="dvp">访客增速%</button>
+    <button class="fb" data-k="db">博客增量</button>
+    <button class="fb" data-k="ratio">博客/访客倍数</button>
+    <span class="fb-count muted" id="tcount"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="grid freeze-1" id="tbl">
+      <thead><tr>
+        <th>诊所</th>
+        <th>访客评(最新 · 增量)</th>
+        <th>访客走势</th>
+        <th>博客评(最新 · 增量)</th>
+        <th>博客走势</th>
+        <th>博客/访客</th>
+        <th>采集窗口</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <p class="muted" style="margin-top:1rem">每日 08:30(服务器时)自动快照;历史起点为各诊所的调研采集日,故窗口天数不一。仅静态抓取 NAVER,与小红书无关。</p>
+</main>
+<script src="/assets/app.js"></script>
+<script>
+(async () => {
+  await initPage("trends");
+  const data = await fetchJSON("/api/trends");
+
+  const daysBetween = (a, b) => Math.max(0, Math.round((new Date(b) - new Date(a)) / 86400000));
+  const growth = (s) => {
+    if (!s || !s.length) return null;
+    const first = s[0], last = s[s.length - 1];
+    return { latest: last.c, delta: last.c - first.c, first: first.c,
+             pct: first.c ? (last.c - first.c) / first.c * 100 : null,
+             days: daysBetween(first.d, last.d), n: s.length };
+  };
+
+  // 自适应缩放的 SVG 迷你走势图(单点显示为圆点)
+  function spark(pts, color) {
+    const w = 118, h = 30;
+    if (!pts || !pts.length) return `<span class="muted">—</span>`;
+    if (pts.length === 1)
+      return `<svg class="spark" width="${w}" height="${h}"><circle cx="${w - 5}" cy="${h / 2}" r="2.5" fill="${color}"/></svg>`;
+    const cs = pts.map((p) => p.c), min = Math.min(...cs), max = Math.max(...cs), span = (max - min) || 1;
+    const X = (i) => 3 + i * (w - 6) / (pts.length - 1);
+    const Y = (c) => h - 4 - (c - min) * (h - 8) / span;
+    const d = pts.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(p.c).toFixed(1)}`).join(" ");
+    const lx = X(pts.length - 1).toFixed(1), ly = Y(pts[pts.length - 1].c).toFixed(1);
+    return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+      <path d="${d}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>
+      <circle cx="${lx}" cy="${ly}" r="2.2" fill="${color}"/></svg>`;
+  }
+
+  const deltaTag = (g) => {
+    if (!g) return '<span class="muted">未获取</span>';
+    if (g.n < 2) return `<span class="t-latest">${g.latest.toLocaleString("en-US")}</span> <span class="muted">仅1次采集</span>`;
+    const cls = g.delta > 0 ? "t-up" : g.delta < 0 ? "t-down" : "muted";
+    const sign = g.delta > 0 ? "+" : "";
+    const pct = g.pct == null ? "" : ` <span class="${cls}">(${sign}${g.pct.toFixed(1)}%)</span>`;
+    return `<span class="t-latest">${g.latest.toLocaleString("en-US")}</span> <span class="${cls}">${sign}${g.delta.toLocaleString("en-US")}</span>${pct}`;
+  };
+
+  const rows = data.map((c) => {
+    const gv = growth(c.visitor), gb = growth(c.blog);
+    const ratio = (gv && gb && gv.latest) ? gb.latest / gv.latest : null;
+    return {
+      c, gv, gb, ratio,
+      dv: gv && gv.n >= 2 ? gv.delta : -Infinity,
+      dvp: gv && gv.n >= 2 && gv.pct != null ? gv.pct : -Infinity,
+      db: gb && gb.n >= 2 ? gb.delta : -Infinity,
+      ratioSort: ratio == null ? -Infinity : ratio,
+    };
+  });
+
+  const tbody = document.querySelector("#tbl tbody");
+  let sortK = "dv";
+  const keyOf = { dv: "dv", dvp: "dvp", db: "db", ratio: "ratioSort" };
+  function render() {
+    const list = rows.slice().sort((a, b) => b[keyOf[sortK]] - a[keyOf[sortK]]);
+    tbody.innerHTML = list.map(({ c, gv, gb, ratio }) => {
+      const win = gv && gv.n >= 2 ? `${gv.days} 天 · ${gv.n} 次` : (gb && gb.n >= 2 ? `${gb.days} 天 · ${gb.n} 次` : "首日");
+      const ratioCls = ratio != null && ratio >= 5 ? "t-hot" : "";
+      return `<tr>
+        <td><a href="/clinic.html?slug=${encodeURIComponent(c.slug)}">${esc(c.name_zh || c.slug)}</a>
+            <span class="kr">${esc(c.name_ko || "")}</span></td>
+        <td class="num">${deltaTag(gv)}</td>
+        <td>${spark(c.visitor, "#2563eb")}</td>
+        <td class="num">${deltaTag(gb)}</td>
+        <td>${spark(c.blog, "#8b949e")}</td>
+        <td class="num ${ratioCls}">${ratio == null ? '<span class="muted">—</span>' : ratio.toFixed(1) + "×"}</td>
+        <td class="muted">${win}</td>
+      </tr>`;
+    }).join("") || '<tr><td colspan="7" class="muted">暂无趋势数据</td></tr>';
+    document.getElementById("tcount").textContent = `共 ${list.length} 家 · 跟踪中`;
+  }
+  render();
+
+  document.getElementById("metricbar").addEventListener("click", (e) => {
+    const btn = e.target.closest("button.fb");
+    if (!btn) return;
+    sortK = btn.dataset.k;
+    document.querySelectorAll("#metricbar .fb").forEach((b) => b.classList.toggle("active", b === btn));
+    render();
+  });
+})();
+</script>

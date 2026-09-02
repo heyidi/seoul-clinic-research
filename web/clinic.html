@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>诊所详情 · Seoul Beauty</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💆%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/style.css">
+<main id="main"><p class="muted">加载中…</p></main>
+<script src="/assets/app.js"></script>
+<script>
+(async () => {
+  await initPage("");
+  const slug = new URLSearchParams(location.search).get("slug");
+  const main = document.getElementById("main");
+  let c;
+  try { c = await fetchJSON(`/api/clinics/${encodeURIComponent(slug)}`); }
+  catch { main.innerHTML = '<h1>未找到该诊所</h1><p><a href="/">← 返回总览</a></p>'; return; }
+  document.title = `${c.name_zh || c.slug} · Seoul Beauty`;
+
+  // 编者速览:一句话结论。历史数据若超长(契约漂移),先给首句,余文折叠,不再让首屏变文墙
+  let editorLead = "";
+  if (c.editor_note) {
+    const t = c.editor_note;
+    if (t.length > 400) {
+      let cut = t.slice(0, 200);
+      const i = cut.lastIndexOf("。");
+      if (i > 60) cut = cut.slice(0, i + 1);
+      editorLead = `<div class="editor-lead">
+        <p class="lead-head">${fmtInline(cut)}</p>
+        <details class="lead-more"><summary>展开全文</summary><div class="lead-rest">${fmtInline(t.slice(cut.length))}</div></details>
+      </div>`;
+    } else {
+      editorLead = `<p class="editor-lead">${fmtInline(t)}</p>`;
+    }
+  }
+
+  // 每来源最新口碑快照:按 (采集日, id) 取最新,同日重复采集后插入者胜(与比价接口同规则)
+  const sourceLatest = {};
+  for (const r of c.rating_history) {
+    if (r.review_count == null) continue;
+    const prev = sourceLatest[r.source];
+    const newer = !prev
+      || (r.collected_at || "") > (prev.collected_at || "")
+      || ((r.collected_at || "") === (prev.collected_at || "") && (r.id || 0) > (prev.id || 0));
+    if (newer) sourceLatest[r.source] = r;
+  }
+  const addDays = (iso, d) => {
+    if (!/^\d{4}-\d{2}-\d{2}/.test(iso || "")) return "";
+    const t = new Date(iso.slice(0, 10) + "T00:00:00Z");
+    t.setUTCDate(t.getUTCDate() + d);
+    return t.toISOString().slice(0, 10);
+  };
+  const deltaOf = (latest, days) => {
+    const cutoff = addDays(latest.collected_at, -days);
+    if (!cutoff) return null;
+    let base = null;
+    for (const r of c.rating_history) {
+      if (r.source !== latest.source || r.review_count == null) continue;
+      if ((r.collected_at || "") <= cutoff && (!base || (r.collected_at || "") > (base.collected_at || ""))) base = r;
+    }
+    return base ? latest.review_count - base.review_count : null;
+  };
+  const fmtDelta = (d) => (d > 0 ? `<span class="t-up">+${d.toLocaleString("en-US")}</span>`
+    : d < 0 ? `<span class="t-down">${d.toLocaleString("en-US")}</span>` : "±0");
+  const srcName = (s) => ({ naver_map: "NAVER 访客", naver_blog: "NAVER 博客", google: "Google", modoodoc: "모두닥" }[s]
+    || (s.startsWith("naver_map_") ? `NAVER 访客(${s.slice(10)})` : s));
+  // 口碑一行放进事实面板:最新值 + 最近增量 + 来源角标,历史曲线归趋势页,不再单独铺表
+  const repParts = [];
+  const repAdd = (label, r) => {
+    if (!r) return;
+    const d30 = deltaOf(r, 30), d7 = deltaOf(r, 7);
+    const win = d30 != null ? `近30天 ${fmtDelta(d30)}` : d7 != null ? `近7天 ${fmtDelta(d7)}` : "";
+    repParts.push(`${label} ${Number(r.review_count).toLocaleString("en-US")}${win ? ` <span class="muted">(${win})</span>` : ""}${srcBadge(r.source_url, r.collected_at)}`);
+  };
+  repAdd("访客", sourceLatest.naver_map);
+  repAdd("博客", sourceLatest.naver_blog);
+  for (const [s, r] of Object.entries(sourceLatest)) {
+    if (s !== "naver_map" && s !== "naver_blog") repAdd(srcName(s), r);
+  }
+  const repLine = repParts.length
+    ? repParts.join('<span class="sep">·</span>') + '<span class="sep">·</span><a href="/trends.html">完整曲线</a>' : "";
+
+  // 关键事实面板(结构化字段,取代散落的地址/链接/考据长文)
+  const channels = [["官网", c.official_site], ["NAVER Place", c.naver_place_url], ["Instagram", c.instagram], ["Facebook", c.facebook]]
+    .filter(([, u]) => u).map(([n, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${n}</a>`).join('<span class="sep">·</span>');
+  const factRow = (label, value) => (value ? `<div><dt>${label}</dt><dd>${value}</dd></div>` : "");
+  const addressVal = (c.address_zh || c.address_ko)
+    ? `${esc(c.address_zh || "")}${c.address_ko ? `<span class="kr">${esc(c.address_ko)}</span>` : ""}`
+    : "";
+  const branchVal = (c.branches && c.branches.length) ? `${c.branches.length} 家 · <a href="#branches">见分店一览</a>` : "";
+  const nowYear = new Date().getFullYear();
+  const openedVal = c.opened_year
+    ? `${c.opened_year} 年开业 · <b>${nowYear - c.opened_year >= 1 ? `运营约 ${nowYear - c.opened_year} 年` : "今年新开"}</b>`
+    : "";
+  const atm = atmosphereOf(c.notes);
+  const atmRest = atm && atm.full.length > atm.tag.length ? atm.full.slice(atm.tag.length).replace(/^[,,]\s*/, "") : "";
+  const atmVal = atm
+    ? `<span class="badge ${atm.cls}">${esc(atm.tag)}</span>${atmRest ? ` <span class="muted">${esc(atmRest)}</span>` : ""} · <a href="#assess">判定证据</a>`
+    : "";
+  const facts = `<dl class="facts">
+    ${factRow("认证", `${verifyBadge(c.verification_status)}${c.verification_status === "verified" ? ' <span class="muted">官网 · NAVER · 社媒三方互证</span>' : ""}`)}
+    ${factRow("面诊风格", atmVal)}
+    ${factRow("运营年限", openedVal)}
+    ${factRow("地址", addressVal)}
+    ${factRow("官方渠道", channels)}
+    ${factRow("分店", branchVal)}
+    ${factRow("口碑快照", repLine)}
+  </dl>`;
+
+  // 价目表:比价轴类目在前,"未归类"(未挂比价轴)沉底且默认折叠;全组无标准项目时不渲染该列
+  const CAT_ORDER = { "光电类": 1, "注射类": 2, "线雕类": 3, "其他": 4, "未归类": 9 };
+  const priceGroups = {};
+  for (const p of c.prices) (priceGroups[p.category || "未归类"] ??= []).push(p);
+  const priceRow = (p, showTreat) => `<tr>
+      ${showTreat ? `<td>${esc(p.treatment_zh || "—")}${p.variant_zh ? " · " + esc(p.variant_zh) : ""}</td>` : ""}
+      <td>${esc(p.raw_name_zh || "—")}<br><span class="muted">${esc(p.raw_name_ko || "")}</span></td>
+      <td class="price">${fmtPrice(p.price_krw)}${p.is_event_price ? ' <span class="event">活动价</span>' : ""}</td>
+      <td>${esc(p.spec_notes || "")}</td>
+      <td>${srcBadge(p.source_url, p.collected_at)} <span class="muted">${esc(p.collected_at)}</span></td>
+    </tr>`;
+  const prices = Object.entries(priceGroups)
+    .sort((a, b) => (CAT_ORDER[a[0]] || 5) - (CAT_ORDER[b[0]] || 5))
+    .map(([cat, items]) => {
+      const showTreat = items.some((p) => p.treatment_zh);
+      const amounts = items.map((p) => p.price_krw).filter((v) => v != null);
+      const range = amounts.length ? `${fmtPrice(Math.min(...amounts))} – ${fmtPrice(Math.max(...amounts))}` : "";
+      const open = cat !== "未归类";
+      return `<details class="price-group"${open ? " open" : ""}>
+        <summary><h3>${esc(cat)}</h3><span class="pg-meta">${items.length} 项${range ? " · " + range : ""}${open ? "" : " · 未挂比价轴"}</span></summary>
+        <div class="table-wrap">
+          <table class="grid freeze-1"><thead><tr>${showTreat ? "<th>标准项目</th>" : ""}<th>官网项目名(中/韩)</th><th>价格</th><th>规格</th><th>来源</th></tr></thead>
+          <tbody>${items.map((p) => priceRow(p, showTreat)).join("")}</tbody></table>
+        </div></details>`;
+    }).join("");
+
+  const sentLabel = (s) => (s === "positive" ? "好评" : s === "negative" ? "差评" : "中性");
+  const sentClass = (s) => (s === "positive" ? "positive" : s === "negative" ? "negative" : "neutral");
+  // 评论卡:结尾的【编者标注】移到 meta 行,不再与引文混排;卡片瀑布排布,消掉等高留白
+  const reviews = c.reviews.map((r) => {
+    const m = (r.text_zh || "").match(/^([\s\S]*?)\s*【([^】]+)】\s*$/);
+    const body = m ? m[1] : (r.text_zh || "");
+    const anno = m ? m[2] : "";
+    return `<section class="card review-card sent-${sentClass(r.sentiment)}">
+      <p>${esc(body)}</p>
+      ${r.text_original ? `<p class="muted">${esc(r.text_original)}</p>` : ""}
+      <p class="meta muted">${esc(r.source)} · <span class="sent-tag ${sentClass(r.sentiment)}">${sentLabel(r.sentiment)}</span>${
+        r.issue_type ? ` · <span class="badge">问题领域:${esc(r.issue_type)}</span>` : ""} ·
+        <a href="${esc(r.post_url)}" target="_blank" rel="noopener">原帖</a> · 采集于 ${esc(r.collected_at)}</p>
+      ${anno ? `<p class="meta anno">编者注:${esc(anno)}</p>` : ""}
+    </section>`;
+  }).join("");
+
+  const AD_NATURES = ["官方号", "KOC系列", "店家互动帖"];
+  const natureBadge = (n) => {
+    if (!n || n === "未判定") return "";
+    const cls = n === "素人" ? "nat-real" : n === "归因存疑" ? "nat-doubt" : "nat-ad";
+    return `<span class="badge ${cls}">${esc(n)}</span>`;
+  };
+  const xhs = c.xhs_posts.map((x) => `<li${AD_NATURES.includes(x.nature) ? ' class="xhs-ad"' : ""}>
+      <a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title || x.url)}</a>
+      ${natureBadge(x.nature)}
+      <span class="badge ${x.sentiment === "推荐" ? "ok" : x.sentiment === "差评" ? "danger" : ""}">${esc(x.sentiment || "中性")}</span>
+      ${x.summary_zh ? `<div class="muted">${esc(x.summary_zh)}</div>` : ""}
+    </li>`).join("");
+
+  // 医生卡:结论(姓名/头衔/资质徽章)常显;过程性考据超过 200 字折叠,结构化排版
+  const doctors = c.doctors.map((d) => {
+    const cred = d.credentials_zh || "";
+    const credHtml = !cred ? ""
+      : cred.length > 200
+        ? `<details class="cred-details"><summary>资质考据(点击展开)</summary><div class="cred-prose">${renderProse(cred)}</div></details>`
+        : `<div class="cred">${esc(cred)}</div>`;
+    return `<section class="card doctor-card${d.is_specialist === "specialist" ? " is-specialist" : ""}">
+      <div><span class="name">${esc(d.name_zh || d.name_ko || "")}</span> <span class="muted">${esc(d.name_ko || "")}</span>
+      ${d.title ? ` · <span class="muted">${esc(d.title)}</span>` : ""}</div>
+      <span class="badge ${d.is_specialist === "specialist" ? "ok" : ""}">${d.is_specialist === "specialist" ? "专科医师" : d.is_specialist === "general" ? "一般医师" : "资质未标明"}</span>
+      ${credHtml}
+      <div class="card-src">${srcBadge(d.source_url, d.collected_at)}</div>
+    </section>`;
+  }).join("");
+
+  // 评论数已在 API 层对齐 ratings 最新快照(主店与口碑快照同源同值),截至日期随格子展示
+  const branches = (c.branches || []).map((b) => `<tr${b.is_primary ? ' class="is-primary"' : ""}>
+      <td>${esc(b.name_zh || b.name_ko)}<span class="kr">${esc(b.name_ko)}</span></td>
+      <td class="muted">${esc(b.address_ko || "")}</td>
+      <td class="num">${branchNum(b.visitor_reviews, b.visitor_as_of)}</td>
+      <td class="num">${branchNum(b.blog_reviews, b.blog_as_of)}</td>
+      <td>${b.naver_place_url ? `<a href="${esc(b.naver_place_url)}" target="_blank" rel="noopener">NAVER ↗</a>` : ""} ${srcBadge(b.source_url, b.collected_at)}</td>
+    </tr>`).join("");
+
+  const offGroups = {};
+  for (const o of c.offerings) (offGroups[o.category] ??= []).push(o);
+  const offerings = Object.entries(offGroups).map(([cat, items]) => `
+      <div class="table-wrap">
+        <h3>${esc(cat)}</h3>
+        <table class="grid freeze-1"><thead><tr><th>名称(中)</th><th>韩文</th><th>英文</th><th>说明</th><th>来源</th></tr></thead>
+        <tbody>${items.map((o) => `<tr>
+          <td>${esc(o.name_zh || "—")}</td><td>${esc(o.name_ko || "")}</td><td>${esc(o.name_en || "")}</td>
+          <td>${esc(o.description_zh || "")}</td>
+          <td>${srcBadge(o.source_url, o.collected_at)}</td>
+        </tr>`).join("")}</tbody></table>
+      </div>`).join("");
+
+  // 价目原图:归档中的图片文件,按采集日期分组,点击看大图(价格判读的原始凭据)
+  const isImg = (a) => /\.(jpe?g|png|webp)$/i.test(a.file_path || "");
+  const imgArchives = c.archives.filter(isImg);
+  const imgDates = [...new Set(imgArchives.map((a) => a.fetched_at))].sort().reverse();
+  const capOf = (a) => (a.description || a.file_path).replace(/用户提供价目图·/, "");
+  const priceShots = imgDates.map((d) => `
+      <h3 class="shot-date">采集于 ${esc(d)}</h3>
+      <div class="shots">${imgArchives.filter((a) => a.fetched_at === d).map((a) => `
+        <figure class="shot">
+          <a href="/archive/${encodeURI(a.file_path)}" target="_blank" rel="noopener">
+            <img src="/archive/${encodeURI(a.file_path)}" alt="${esc(a.description || a.file_path)}" loading="lazy">
+          </a>
+          <figcaption>${esc(capOf(a))}</figcaption>
+        </figure>`).join("")}</div>`).join("");
+
+  // 原始资料归档:价目图已在上方画廊展示,此处只列网页快照等非图片归档,不重复
+  const docArchives = priceShots ? c.archives.filter((a) => !isImg(a)) : c.archives;
+  const archives = docArchives.map((a) => `<li>
+      <a href="/archive/${encodeURI(a.file_path)}" target="_blank">${esc(a.description || a.file_path)}</a>
+      <span class="muted">采集于 ${esc(a.fetched_at)}</span> ${a.source_url ? srcBadge(a.source_url, a.fetched_at) : ""}
+    </li>`).join("");
+
+  // 页内目录:长档案的跳转锚点(仅列实际存在的区块)
+  const toc = [];
+  if (c.notes) toc.push(["assess", "调研结论"]);
+  if (branches) toc.push(["branches", "分店一览"]);
+  toc.push(["doctors", "医生与资质"], ["prices", "价目表"]);
+  if (priceShots) toc.push(["shots", "价目原图"]);
+  toc.push(["offerings", "设备与药品"], ["reviews", "评论精选"], ["xhs", "小红书调研"]);
+  if (c.verification_notes) toc.push(["verify", "真伪甄别"]);
+  toc.push(["archives", "原始资料"]);
+  const tocHtml = `<nav class="page-toc chips">${toc.map(([id, l]) => `<a class="chip" href="#${id}">${l}</a>`).join("")}</nav>`;
+
+  main.innerHTML = `
+    <span class="eyebrow">诊所档案</span>
+    <h1>${esc(c.name_zh || c.slug)} ${verifyBadge(c.verification_status)}</h1>
+    <p class="lede muted">${esc(c.name_ko || "")} ${c.name_en ? "· " + esc(c.name_en) : ""}</p>
+    ${editorLead}
+    ${facts}
+    ${tocHtml}
+
+    ${c.notes ? `<h2 id="assess">调研结论</h2><div class="assess">${renderProse(c.notes)}</div>` : ""}
+
+    ${branches ? `<h2 id="branches">分店一览(各店评论数单独统计)</h2>
+    <div class="table-wrap">
+      <table class="grid freeze-1"><thead><tr><th>分店</th><th>地址</th><th>NAVER 访客评论</th><th>NAVER 博客</th><th>来源</th></tr></thead>
+      <tbody>${branches}</tbody></table>
+    </div>
+    <p class="muted">加粗行为本档案主店;同连锁分店的口碑/医生/价格可能差异极大,请按分店单独判断。</p>` : ""}
+
+    <h2 id="doctors">医生与资质</h2>
+    <div class="card-grid">${doctors || '<p class="muted">未获取</p>'}</div>
+
+    <h2 id="prices">价目表(中韩对照)</h2>
+    ${prices || '<p class="muted">未收录</p>'}
+
+    ${priceShots ? `<h2 id="shots">价目原图</h2>
+    <p class="muted">上表价格的判读凭据;点击看大图。</p>
+    ${priceShots}` : ""}
+
+    <h2 id="offerings">设备与药品(官网所列项目)</h2>
+    ${offerings || '<p class="muted">未收录</p>'}
+
+    <h2 id="reviews">评论精选(中韩对照)</h2>
+    <div class="card-grid masonry">${reviews || '<p class="muted">未收录</p>'}</div>
+
+    <h2 id="xhs">小红书调研</h2>
+    <ul class="stack">${xhs || '<li class="muted">未收录</li>'}</ul>
+
+    ${c.verification_notes ? `<details class="verify-details" id="verify">
+      <summary>真伪甄别考据 · 三方互证与仿冒排查依据(点击展开)</summary>
+      <div class="verify-body">${renderProse(c.verification_notes)}</div>
+    </details>` : ""}
+
+    <h2 id="archives">原始资料归档</h2>
+    <ul class="stack archives">${archives || '<li class="muted">暂无归档</li>'}</ul>`;
+})();
+</script>
+</html>

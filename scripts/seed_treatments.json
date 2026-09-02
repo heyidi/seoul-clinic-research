@@ -1,0 +1,23 @@
+[
+  {"category": "注射类", "treatment_zh": "肉毒素", "treatment_ko": "보톡스", "variant_zh": "德国西马", "variant_ko": "제오민", "variant_en": "Xeomin"},
+  {"category": "注射类", "treatment_zh": "肉毒素", "treatment_ko": "보톡스", "variant_zh": "韩国本土", "variant_ko": "국산(보툴렉스 등)", "variant_en": "Botulax etc."},
+  {"category": "注射类", "treatment_zh": "肉毒素", "treatment_ko": "보톡스", "variant_zh": "美国保妥适", "variant_ko": "앨러간", "variant_en": "Allergan Botox"},
+  {"category": "注射类", "treatment_zh": "水光针", "treatment_ko": "물광주사", "variant_zh": "基础水光", "variant_ko": "물광", "variant_en": "Skin booster"},
+  {"category": "注射类", "treatment_zh": "Rejuran婴儿针", "treatment_ko": "리쥬란", "variant_zh": "Healer 2cc", "variant_ko": "리쥬란 힐러 2cc", "variant_en": "Rejuran Healer 2cc"},
+  {"category": "注射类", "treatment_zh": "Rejuran婴儿针", "treatment_ko": "리쥬란", "variant_zh": "眼周 HB 1cc", "variant_ko": "리쥬란 HB 1cc", "variant_en": "Rejuran HB 1cc"},
+  {"category": "注射类", "treatment_zh": "玻尿酸填充", "treatment_ko": "필러", "variant_zh": "进口(乔雅登等) 1cc", "variant_ko": "수입필러 1cc", "variant_en": "Imported filler 1cc"},
+  {"category": "注射类", "treatment_zh": "玻尿酸填充", "treatment_ko": "필러", "variant_zh": "韩国本土 1cc", "variant_ko": "국산필러 1cc", "variant_en": "Korean filler 1cc"},
+  {"category": "注射类", "treatment_zh": "溶脂针", "treatment_ko": "윤곽주사", "variant_zh": "面部轮廓溶脂", "variant_ko": "윤곽주사", "variant_en": "Contour injection"},
+  {"category": "注射类", "treatment_zh": "胶原蛋白针", "treatment_ko": "쥬베룩", "variant_zh": "Juvelook", "variant_ko": "쥬베룩", "variant_en": "Juvelook"},
+  {"category": "光电类", "treatment_zh": "超声提升(超声刀)", "treatment_ko": "울쎄라", "variant_zh": "Ulthera 300线", "variant_ko": "울쎄라 300샷", "variant_en": "Ulthera 300 shots"},
+  {"category": "光电类", "treatment_zh": "超声提升(超声刀)", "treatment_ko": "울쎄라", "variant_zh": "Ulthera 600线", "variant_ko": "울쎄라 600샷", "variant_en": "Ulthera 600 shots"},
+  {"category": "光电类", "treatment_zh": "超声提升(超声刀)", "treatment_ko": "슈링크", "variant_zh": "Shurink 300发", "variant_ko": "슈링크 유니버스 300샷", "variant_en": "Shurink 300 shots"},
+  {"category": "光电类", "treatment_zh": "超声提升(超声刀)", "treatment_ko": "슈링크", "variant_zh": "Shurink 600发", "variant_ko": "슈링크 유니버스 600샷", "variant_en": "Shurink 600 shots"},
+  {"category": "光电类", "treatment_zh": "热玛吉", "treatment_ko": "써마지", "variant_zh": "FLX 300发", "variant_ko": "써마지FLX 300샷", "variant_en": "Thermage FLX 300"},
+  {"category": "光电类", "treatment_zh": "热玛吉", "treatment_ko": "써마지", "variant_zh": "FLX 600发", "variant_ko": "써마지FLX 600샷", "variant_en": "Thermage FLX 600"},
+  {"category": "光电类", "treatment_zh": "热玛吉", "treatment_ko": "써마지", "variant_zh": "FLX 900发", "variant_ko": "써마지FLX 900샷", "variant_en": "Thermage FLX 900"},
+  {"category": "光电类", "treatment_zh": "皮秒", "treatment_ko": "피코레이저", "variant_zh": "全脸提亮 单次", "variant_ko": "피코토닝 1회", "variant_en": "Pico toning x1"},
+  {"category": "光电类", "treatment_zh": "皮秒", "treatment_ko": "피코레이저", "variant_zh": "全脸提亮 10次套餐", "variant_ko": "피코토닝 10회", "variant_en": "Pico toning x10"},
+  {"category": "光电类", "treatment_zh": "InMode", "treatment_ko": "인모드", "variant_zh": "FX+Forma 单次", "variant_ko": "인모드 FX+포르마 1회", "variant_en": "InMode FX+Forma x1"},
+  {"category": "光电类", "treatment_zh": "黄金微针", "treatment_ko": "포텐자", "variant_zh": "全脸 单次", "variant_ko": "포텐자 1회", "variant_en": "Potenza x1"}
+]

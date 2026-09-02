@@ -1,0 +1,474 @@
+/* Seoul Beauty — 干净工具风(Notion/Linear 参照):白底、大留白、信息即设计 */
+* { box-sizing: border-box; }
+:root {
+  --ink: #1f2328;
+  --ink-2: #57606a;
+  --ink-3: #8b949e;
+  --line: #e6e8eb;
+  --bg: #ffffff;
+  --bg-2: #f6f8fa;
+  --accent: #2563eb;
+  --ok: #1a7f37;
+  --ok-bg: #dafbe1;
+  --warn: #d1242f;
+  --warn-bg: #ffebe9;
+  --pkg: #bc4c00;
+  --pkg-bg: #fff1e5;
+}
+/* text-size-adjust:禁用移动端字体自动膨胀——横滚宽表不膨胀而窄块膨胀,会让分店小表
+   看起来比主表还大(2026-08-13 用户手机实测),各元素一律按 CSS 标定字号渲染 */
+html { -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg); color: var(--ink);
+  font-size: 15px; line-height: 1.6;
+}
+
+/* ── 页头 ── */
+header.site {
+  display: flex; align-items: center; gap: 1.6rem;
+  padding: .65rem 2rem; border-bottom: 1px solid var(--line);
+  background: var(--bg); position: sticky; top: 0; z-index: 500; flex-wrap: wrap;
+}
+header.site .logo { font-weight: 650; font-size: .95rem; letter-spacing: .01em; }
+header.site nav { display: flex; gap: .25rem; }
+header.site nav a {
+  color: var(--ink-2); text-decoration: none; font-size: .88rem;
+  padding: .3rem .65rem; border-radius: 6px; white-space: nowrap;
+}
+header.site nav a:hover { background: var(--bg-2); color: var(--ink); }
+header.site nav a.active { background: var(--bg-2); color: var(--ink); font-weight: 600; }
+header.site .fx { margin-left: auto; display: flex; align-items: center; gap: .5rem; font-size: .8rem; color: var(--ink-3); }
+header.site select, header.site button {
+  font: inherit; font-size: .82rem; padding: .28rem .55rem;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink);
+  cursor: pointer;
+}
+header.site button:hover, header.site select:hover { border-color: var(--ink-3); }
+
+main { max-width: 1280px; margin: 2rem auto 3rem; padding: 0 2rem; }
+h1 { font-size: 1.45rem; font-weight: 650; letter-spacing: -.01em; margin: .2rem 0 .4rem; }
+h2 { font-size: 1.05rem; font-weight: 650; margin: 2.2rem 0 .8rem; padding-bottom: .4rem; border-bottom: 1px solid var(--line); }
+h3 { font-size: .92rem; font-weight: 600; margin: 1.2rem 0 .5rem; color: var(--ink-2); }
+.eyebrow { font-size: .75rem; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .08em; }
+.lede { color: var(--ink-2); margin-top: 0; }
+.muted { color: var(--ink-3); font-size: .84rem; }
+.name-cell .en {
+  display: block; color: var(--accent); opacity: .72;
+  font-size: .8rem; font-weight: 400; line-height: 1.35; margin-top: .1rem;
+}
+.kr { display: block; color: var(--ink-3); font-size: .8rem; font-weight: 400; line-height: 1.35; margin-top: .1rem; }
+.asof { display: block; color: var(--ink-3); font-size: .72rem; font-weight: 400; line-height: 1.3; white-space: nowrap; } /* 分店评论数的"截至日期" */
+
+/* ── 表格 ── */
+.table-wrap { overflow-x: auto; }
+/* min-width:窄屏下宽表走横滚而不是 CJK 竖向坍缩(一字一行,曾致知识库移动端页高 1.9 万px) */
+table.grid { width: 100%; min-width: 680px; border-collapse: collapse; font-size: .88rem; }
+table.grid th, table.grid td { padding: .55rem .7rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+table.grid th { font-size: .78rem; font-weight: 600; color: var(--ink-3); background: var(--bg); white-space: nowrap; }
+table.grid th[data-k] { cursor: pointer; } /* 只有真正可排序的表头(总览页)才给手型 */
+table.grid tr:hover td { background: var(--bg-2); }
+.num, .price { font-variant-numeric: tabular-nums; }
+
+/* ── 徽章体系 ── */
+.badge {
+  display: inline-block; padding: .05rem .5rem; border-radius: 999px;
+  font-size: .72rem; font-weight: 550; border: 1px solid var(--line);
+  color: var(--ink-2); background: var(--bg); vertical-align: 1px;
+}
+.badge.ok { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+.badge.danger { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+.badge.pkg { background: var(--pkg-bg); color: var(--pkg); border-color: transparent; }
+/* 面诊风格标签(氛围判定)是**分类轴,不是质量轴**:1v1 与流水线只是不同选择——
+   不需要技术门槛的项目走流水线也合理且便宜(2026-08-20 用户口径),故三档同一套中性配色,
+   靠文字区分,不许再用绿/橙暗示优劣 */
+.badge.atm-1v1, .badge.atm-line, .badge.atm-mid { background: var(--bg-2); color: var(--ink-2); border-color: var(--line); }
+a.src {
+  font-size: .72rem; color: var(--ink-3); text-decoration: none;
+  border: 1px solid var(--line); border-radius: 5px; padding: 0 .35rem; margin-left: .25rem;
+}
+a.src:hover { color: var(--accent); border-color: var(--accent); }
+.event { color: var(--pkg); font-size: .74rem; font-weight: 600; }
+
+/* ── 卡片 ── */
+section.card, .card {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  padding: .9rem 1.1rem; margin-bottom: .8rem;
+}
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: .8rem; }
+.card.notice { background: var(--bg-2); }
+.review-card.sent-negative { border-left: 3px solid var(--warn); }
+.review-card.sent-positive { border-left: 3px solid var(--ok); }
+.sent-tag.negative { color: var(--warn); font-weight: 600; }
+.sent-tag.positive { color: var(--ok); }
+.doctor-card.is-specialist { border-left: 3px solid var(--ok); }
+.doctor-card .name { font-weight: 600; }
+.doctor-card .cred { white-space: pre-line; color: var(--ink-2); font-size: .84rem; margin-top: .45rem; }
+.pillrow a { color: var(--accent); text-decoration: none; margin-right: .9rem; font-size: .88rem; }
+.pillrow a:hover { text-decoration: underline; }
+ul.stack { list-style: none; padding: 0; }
+ul.stack li { padding: .5rem 0; border-bottom: 1px solid var(--line); }
+ul.stack a { color: var(--accent); text-decoration: none; }
+ul.stack a:hover { text-decoration: underline; }
+a { color: var(--accent); }
+main a { text-decoration: none; }
+main a:hover { text-decoration: underline; }
+
+/* ── 一键比价:左树右果 ── */
+.compare-layout { display: flex; gap: 2rem; align-items: flex-start; max-width: 1280px; }
+aside.tagtree {
+  flex: 0 0 264px; position: sticky; top: 65px;
+  max-height: calc(100vh - 90px); overflow-y: auto;
+  border: 1px solid var(--line); border-radius: 10px; padding: .8rem 1rem;
+  font-size: .87rem;
+}
+.tagtree .cat { font-size: .72rem; font-weight: 650; color: var(--ink-3); text-transform: uppercase; letter-spacing: .07em; margin: .9rem 0 .3rem; }
+.tagtree .cat:first-child { margin-top: 0; }
+.tagtree .tnode { margin: .15rem 0; }
+.tagtree label { display: flex; align-items: center; gap: .45rem; padding: .18rem .3rem; border-radius: 6px; cursor: pointer; }
+.tagtree label:hover { background: var(--bg-2); }
+.tagtree .tparent > label { font-weight: 600; }
+.tagtree .vlist { margin-left: 1.4rem; }
+.tagtree input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; flex: none; }
+.results { flex: 1; min-width: 0; }
+.results .vsection { margin-bottom: 2.2rem; }
+.results .vsection > h2 { margin-top: 0; }
+
+/* 报价行 */
+.offer {
+  display: flex; gap: 1.2rem; align-items: flex-start;
+  padding: .8rem 1rem; border: 1px solid var(--line); border-radius: 10px; margin-bottom: .55rem;
+}
+.offer:hover { border-color: #c9ccd1; }
+.offer-price { flex: 0 0 138px; }
+.offer-price .amt { font-size: 1.22rem; font-weight: 680; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.offer-price .tag { display: block; margin-top: .15rem; }
+.offer-main { flex: 1; min-width: 0; }
+.offer-main .clinic-line { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
+.offer-main .clinic-line a { font-weight: 600; color: var(--ink); }
+.offer-main .clinic-line a:hover { color: var(--accent); }
+.signals { display: flex; gap: .8rem; font-size: .78rem; color: var(--ink-3); margin-top: .2rem; flex-wrap: wrap; }
+.signals .warn { color: var(--warn); font-weight: 600; }
+.offer-name { margin-top: .35rem; font-size: .87rem; }
+.offer-notes { margin-top: .15rem; }
+.offer-srcline { flex: 0 0 auto; text-align: right; font-size: .76rem; color: var(--ink-3); }
+.offer.pkg-offer { background: #fffcf9; }
+.chips { display: flex; gap: .35rem; flex-wrap: wrap; margin-top: .3rem; }
+.chip { font-size: .74rem; padding: .04rem .5rem; border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line); color: var(--ink-2); }
+.strata-label { font-size: .78rem; font-weight: 650; color: var(--ink-3); margin: 1rem 0 .45rem; display: flex; align-items: center; gap: .5rem; }
+.empty-hint { color: var(--ink-3); font-size: .86rem; padding: .6rem 0; }
+
+/* ── 地图/其他 ── */
+#map { height: 74vh; border: 1px solid var(--line); border-radius: 10px; }
+dialog { border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.3rem; font-size: .9rem; box-shadow: 0 8px 30px rgba(0,0,0,.08); }
+dialog::backdrop { background: rgba(15,23,42,.25); }
+dialog input { font: inherit; padding: .25rem .5rem; border: 1px solid var(--line); border-radius: 6px; width: 8rem; }
+dialog button { font: inherit; font-size: .84rem; padding: .3rem .7rem; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); cursor: pointer; margin-right: .3rem; margin-top: .5rem; }
+dialog button:hover { border-color: var(--ink-3); }
+footer { text-align: center; color: var(--ink-3); font-size: .75rem; padding: 2.5rem 0 2rem; }
+
+@media (max-width: 900px) {
+  main { padding: 0 1rem; }
+  .compare-layout { flex-direction: column; }
+  aside.tagtree { position: static; max-height: none; flex: none; width: 100%; }
+  .offer { flex-wrap: wrap; }
+  .offer-srcline { text-align: left; }
+  /* 页头:窄屏不吸顶(长页上每屏白吃 20%),导航整行横向滚动,杜绝字符级换行 */
+  header.site { position: static; padding: .5rem 1rem; row-gap: .15rem; column-gap: .9rem; }
+  header.site nav { order: 3; flex: 1 1 100%; overflow-x: auto; scrollbar-width: none; }
+  header.site nav::-webkit-scrollbar { display: none; }
+}
+
+/* 价格区间行 */
+.range-line { font-size: .86rem; font-weight: 600; color: var(--ink-2); margin: -.2rem 0 .6rem; }
+.range-line .muted { font-weight: 400; }
+a.chip { text-decoration: none; }
+a.chip:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+/* 总览:短评列/分店展开 */
+td.editor-note { font-size: .8rem; color: var(--ink-2); max-width: 300px; line-height: 1.5; }
+button.expand-btn { font: inherit; font-size: .82rem; padding: .15rem .55rem; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--accent); cursor: pointer; white-space: nowrap; }
+button.expand-btn:hover { border-color: var(--accent); }
+tr.branch-detail > td { background: var(--bg-2); padding: .5rem .9rem .7rem; }
+tr.branch-detail:hover > td { background: var(--bg-2); }
+/* 分店盒钉住横滚视口左缘:主表横向滚动时分店明细不跟着漂出屏幕。
+   刻意不用嵌套 table——分店只有店名+两个评论数,与主表 9 列不同源,
+   做成"表中表"会伪装成可比较对象(2026-08-20 用户评审);改用名单面板 */
+.branch-box { position: sticky; left: 0; display: block; max-width: min(96vw, 720px); }
+.bx-head { display: flex; align-items: baseline; gap: .6rem; padding: .1rem .55rem .45rem; }
+.bx-title { font-size: .84rem; font-weight: 600; }
+.bx-asof { font-size: .74rem; color: var(--ink-3); }
+button.bx-close { margin-left: auto; color: var(--ink-2); }
+.bx-cols, .bx-row {
+  display: grid; grid-template-columns: 1fr 92px 92px 68px;
+  gap: .5rem; align-items: baseline; padding: .32rem .55rem;
+}
+.bx-cols { font-size: .72rem; color: var(--ink-3); padding-bottom: .2rem; border-bottom: 1px solid var(--line); }
+.bx-cols span:nth-child(2), .bx-cols span:nth-child(3) { text-align: right; }
+.bx-list { list-style: none; margin: 0; padding: 0; }
+.bx-row { font-size: .84rem; border-bottom: 1px solid var(--line); }
+.bx-row:last-child { border-bottom: none; }
+.bx-row.is-primary { background: var(--bg); font-weight: 600; }
+.bx-note { font-weight: 400; color: var(--ink-3); font-size: .78rem; }
+.bx-n { text-align: right; font-variant-numeric: tabular-nums; }
+.bx-n .muted { font-size: .78rem; }
+.bx-old { display: block; font-style: normal; font-size: .7rem; color: var(--ink-3); }
+.bx-lnk { font-size: .8rem; white-space: nowrap; }
+.bx-rest { margin-top: .3rem; border-top: 1px solid var(--line); }
+.bx-rest > summary { cursor: pointer; font-size: .8rem; color: var(--ink-2); padding: .4rem .55rem; }
+.bx-rest > summary:hover { color: var(--accent); }
+.bx-rest .bx-row { color: var(--ink-2); }
+/* 窄屏分店面板:必须排在上面这组之后——同优先级晚者胜,写进靠前的 @media 会被覆盖 */
+@media (max-width: 900px) {
+  tr.branch-detail > td { padding: .5rem .4rem .6rem; }
+  .branch-box { max-width: calc(100vw - 1.6rem); }
+  .bx-cols { display: none; }                     /* 列头改由每格 data-l 就地标注 */
+  .bx-row { grid-template-columns: 1fr 64px 64px 18px; gap: .35rem; padding: .34rem .4rem; }
+  .bx-n::before { content: attr(data-l); display: block; font-size: .66rem; color: var(--ink-3); line-height: 1.2; }
+  .lnk-t { display: none; }                       /* 链接只留 ↗,把宽度让给店名 */
+  .bx-head { padding-left: .4rem; padding-right: .4rem; }
+}
+
+/* ── 诊所详情:编者速览 + 关键事实面板 + 考据折叠 ── */
+/* 文本列宽:ch 单位按拉丁字宽算,对中文会缩成半宽假窄列,一律用 px 定measure */
+.editor-lead {
+  font-size: 1.05rem; line-height: 1.7; color: var(--ink);
+  margin: .6rem 0 0; padding: .1rem 0 .1rem .95rem;
+  border-left: 3px solid var(--accent); max-width: 960px;
+}
+dl.facts { margin: 1.2rem 0 .4rem; max-width: 960px; }
+dl.facts > div {
+  display: grid; grid-template-columns: 6rem 1fr; gap: 1rem;
+  padding: .55rem 0; border-bottom: 1px solid var(--line); align-items: baseline;
+}
+dl.facts > div:first-child { border-top: 1px solid var(--line); }
+dl.facts dt { margin: 0; color: var(--ink-3); font-size: .8rem; font-weight: 600; }
+dl.facts dd { margin: 0; font-size: .9rem; line-height: 1.55; }
+dl.facts dd a { color: var(--accent); }
+.sep { color: var(--ink-3); margin: 0 .45rem; }
+
+.assess { color: var(--ink); font-size: .94rem; line-height: 1.8; max-width: 960px; }
+
+/* 结构化调研长文(调研结论 / 真伪甄别考据 / 医生资质考据 共用) */
+.prose-h {
+  font-weight: 650; color: var(--ink); font-size: .95rem; margin: 1.5rem 0 .45rem;
+  padding-left: .6rem; border-left: 3px solid var(--accent);
+}
+.prose-h:first-child { margin-top: 0; }
+.prose-p { margin: .5rem 0; }
+.prose-ul { margin: .3rem 0 .6rem; padding-left: 1.15rem; }
+.prose-ul li { margin: .28rem 0; }
+.prose-ul.enum { list-style: none; padding-left: .1rem; } /* ①②③ 枚举:序号已在文内 */
+.prose-ul.enum li { margin: .45rem 0; }
+.prose-ul.sent { list-style: none; padding-left: 0; margin: .35rem 0 .8rem; } /* 长段按句拆行 */
+.prose-ul.sent li { margin: .32rem 0; padding-left: .95rem; position: relative; }
+.prose-ul.sent li::before {
+  content: ""; position: absolute; left: .1rem; top: .68em;
+  width: 4px; height: 4px; border-radius: 50%; background: var(--ink-3); opacity: .55;
+}
+.q { background: var(--bg-2); border-radius: 4px; padding: 0 .25rem; } /* 「评论原文」证据高亮 */
+strong .ko-inline { color: inherit; } /* 强调段内的韩文跟随强调色,不再灰化割裂 */
+.prose-warn {
+  margin: .5rem 0; padding: .45rem .75rem; border-radius: 8px;
+  background: var(--warn-bg); border-left: 3px solid var(--warn); color: var(--ink); font-size: .92rem;
+}
+.ko-inline { color: var(--ink-3); font-size: .92em; }
+
+details.verify-details {
+  margin: 2.4rem 0 .4rem; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--bg-2);
+}
+details.verify-details > summary {
+  cursor: pointer; padding: .7rem 1.1rem; font-size: .88rem; font-weight: 600;
+  color: var(--ink-2); list-style: none; display: flex; align-items: center; gap: .5rem;
+}
+details.verify-details > summary::-webkit-details-marker { display: none; }
+details.verify-details > summary::before { content: "▸"; color: var(--ink-3); font-size: .75rem; }
+details.verify-details[open] > summary::before { content: "▾"; }
+details.verify-details > summary:hover { color: var(--ink); }
+details.verify-details .verify-body {
+  padding: .8rem 1.1rem 1rem; margin: 0;
+  color: var(--ink-2); font-size: .86rem; line-height: 1.75; border-top: 1px solid var(--line);
+}
+
+@media (max-width: 900px) {
+  dl.facts > div { grid-template-columns: 4.5rem 1fr; gap: .7rem; }
+}
+
+/* ── 总览:推荐指数 + 筛选栏 + 理由标签 ── */
+.filterbar {
+  display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
+  margin: 1.2rem 0 1rem;
+}
+.filterbar .fb-label { font-size: .8rem; color: var(--ink-3); font-weight: 600; margin-right: .2rem; }
+.filterbar .fb-sep { width: 1px; height: 1.1rem; background: var(--line); margin: 0 .3rem; }
+.filterbar .fb-count { margin-left: .3rem; }
+button.fb {
+  font: inherit; font-size: .84rem; padding: .3rem .8rem; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--ink-2);
+}
+button.fb:hover { border-color: var(--ink-3); color: var(--ink); }
+button.fb.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.fb.toggle.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+td.rec-cell { white-space: nowrap; }
+.band {
+  display: inline-block; padding: .1rem .5rem; border-radius: 6px;
+  font-size: .76rem; font-weight: 650; vertical-align: 2px;
+}
+.band.band-good { background: var(--ok-bg); color: var(--ok); }
+.band.band-mid { background: var(--bg-2); color: var(--ink-2); border: 1px solid var(--line); }
+.band.band-avoid { background: var(--warn-bg); color: var(--warn); }
+.rec-score { font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; margin-left: .35rem; }
+
+td.reasons-cell { max-width: 340px; }
+.reasons-cell .editor-line {
+  font-size: .8rem; color: var(--ink-2); line-height: 1.5; margin-bottom: .35rem;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.rtags { display: flex; flex-wrap: wrap; gap: .25rem; }
+.rtag {
+  font-size: .72rem; padding: .04rem .45rem; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink-2); white-space: nowrap;
+}
+.rtag.plus { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+.rtag.minus { background: var(--pkg-bg); color: var(--pkg); border-color: transparent; }
+.rtag.danger { background: var(--warn-bg); color: var(--warn); border-color: transparent; font-weight: 600; }
+.rtag.flag { background: var(--bg-2); color: var(--ink-3); }
+/* 博客/访客比值:数字可悬停/点开看逐店解读。气泡 position:fixed 挂 body——
+   .table-wrap 的 overflow-x:auto 会让纵向也变成 auto,放格子里会被裁掉 */
+.ratio-v { border-bottom: 1px dashed var(--ink-3); cursor: help; outline: none; }
+.ratio-v:hover, .ratio-v:focus { border-bottom-color: var(--accent); color: var(--accent); }
+.ratio-pop {
+  position: fixed; z-index: 900; white-space: pre-line;
+  background: var(--bg); color: var(--ink-2); border: 1px solid var(--line); border-radius: 8px;
+  padding: .6rem .75rem; font-size: .78rem; line-height: 1.55;
+  box-shadow: 0 6px 24px rgba(0,0,0,.10);
+}
+
+/* ── 口碑趋势页 ── */
+svg.spark { display: block; overflow: visible; }
+.t-latest { font-weight: 650; font-variant-numeric: tabular-nums; }
+.t-up { color: var(--ok); font-weight: 600; }
+.t-down { color: var(--warn); font-weight: 600; }
+.t-hot { color: var(--pkg); font-weight: 650; }
+
+/* 小红书帖子性质徽章:素人醒目/软广灰化降权/归因存疑警示(不隐藏任何内容) */
+.badge.nat-real { background: #e8f0fe; color: var(--accent); border-color: transparent; }
+.badge.nat-ad { background: var(--bg-2); color: var(--ink-3); }
+.badge.nat-doubt { background: var(--pkg-bg); color: var(--pkg); border-color: transparent; }
+ul.stack li.xhs-ad { opacity: .62; }
+ul.stack li.xhs-ad:hover, ul.stack li.xhs-ad:focus-within { opacity: 1; }
+
+/* ── 诊所详情:页内目录 / 速览折叠 / 价目分组折叠 / 医生考据折叠 / 评论瀑布 ── */
+[id] { scroll-margin-top: 60px; } /* 锚点跳转躲开桌面吸顶页头 */
+.page-toc { margin: 1.1rem 0 .2rem; }
+
+.editor-lead .lead-head { margin: 0; }
+.editor-lead .lead-rest { margin-top: .4rem; }
+details.lead-more > summary {
+  cursor: pointer; list-style: none; color: var(--accent); font-size: .84rem; margin-top: .3rem;
+}
+details.lead-more > summary::-webkit-details-marker { display: none; }
+details.lead-more > summary::before { content: "▸ "; font-size: .75rem; }
+details.lead-more[open] > summary::before { content: "▾ "; }
+
+details.price-group { margin: 1.3rem 0 .6rem; }
+details.price-group > summary {
+  cursor: pointer; list-style: none; display: flex; align-items: baseline; gap: .55rem;
+  padding: .2rem 0;
+}
+details.price-group > summary::-webkit-details-marker { display: none; }
+details.price-group > summary::before { content: "▸"; color: var(--ink-3); font-size: .75rem; }
+details.price-group[open] > summary::before { content: "▾"; }
+details.price-group > summary h3 { display: inline; margin: 0; }
+details.price-group > summary:hover h3 { color: var(--ink); }
+.pg-meta { font-size: .78rem; color: var(--ink-3); }
+
+details.cred-details > summary {
+  cursor: pointer; list-style: none; color: var(--accent); font-size: .82rem; margin-top: .45rem;
+}
+details.cred-details > summary::-webkit-details-marker { display: none; }
+details.cred-details > summary::before { content: "▸ "; font-size: .72rem; }
+details.cred-details[open] > summary::before { content: "▾ "; }
+.cred-prose { color: var(--ink-2); font-size: .84rem; line-height: 1.7; margin-top: .45rem; }
+.card-src { margin-top: .5rem; }
+
+.card-grid.masonry { display: block; columns: 340px; column-gap: .8rem; }
+.card-grid.masonry > .card { break-inside: avoid; }
+.review-card .anno { color: var(--ink-3); font-size: .78rem; background: var(--bg-2); border-radius: 6px; padding: .25rem .5rem; }
+tr.is-primary td { font-weight: 600; }
+
+/* ── 知识库:产品家族子型号行(如丽珠兰四型盒色) ── */
+tr.kb-child td { background: var(--bg-2); }
+tr.kb-child td:first-child { padding-left: 1.4rem; }
+.kb-branch { color: var(--ink-3); }
+
+/* ── 价目原图画廊(诊所详情页;价格判读的原始凭据) ── */
+.shot-date { font-size: .82rem; font-weight: 600; color: var(--ink-2); margin: 1.1rem 0 .5rem; }
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .9rem; }
+.shot { margin: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--bg); }
+.shot a { display: block; background: var(--bg-2); }
+.shot img {
+  display: block; width: 100%; height: 200px; object-fit: cover; object-position: top;
+  transition: opacity .15s;
+}
+.shot a:hover img, .shot a:focus-visible img { opacity: .85; }
+.shot figcaption {
+  font-size: .74rem; line-height: 1.45; color: var(--ink-2);
+  padding: .45rem .55rem; border-top: 1px solid var(--line);
+}
+
+/* ═══ 窄屏排版(2026-09-02)═════════════════════════════════════════════
+   只动排版,不动信息:表头、每一列、每一枚徽章、韩文正名全部照常显示,
+   不折叠、不藏、不改点击行为。做三件事——
+     ① 字号与内边距收紧,让同样的内容少占横向空间;
+     ② 推荐档位与分数改上下两行(同样两样东西,横向 107px → 约 52px);
+     ③ 横滚时冻住左侧身份列,滚出去也知道这一行是谁(原来的毛病不是横滚本身)。
+   ⚠️ 必须留在文件最末:同优先级晚者胜,写进前面的 @media 会被后面的规则覆盖
+   (2026-08-20 分店面板已经踩过一次)。 */
+@media (max-width: 760px) {
+  .table-wrap table.grid { font-size: .82rem; }
+  .table-wrap table.grid > thead > tr > th,
+  .table-wrap table.grid > tbody > tr > td { padding: .45rem .42rem; }
+  /* 徽章不许从词中间断行(窄列里"专科医师"曾被拆成"专科医/师") */
+  .table-wrap table.grid .badge { white-space: nowrap; }
+  td.reasons-cell { max-width: 240px; }
+  /* 徽章不断词后这一列会被撑开(实测 81px → 278px),封个上限:
+     徽章之间照常换行,只是不再从词中间断 */
+  .table-wrap table.grid.freeze-2 > thead > tr > th:nth-child(3),
+  .table-wrap table.grid.freeze-2 > tbody > tr > td:nth-child(3) { max-width: 7.2rem; }
+  td.rec-cell { white-space: normal; }
+  td.rec-cell .band { display: block; margin: 0 0 .15rem; }
+
+  /* ── 冻结左侧身份列 ── */
+  .table-wrap table.grid.freeze-1 > thead > tr > th:first-child,
+  .table-wrap table.grid.freeze-1 > tbody > tr > td:first-child,
+  .table-wrap table.grid.freeze-2 > thead > tr > th:nth-child(-n+2),
+  .table-wrap table.grid.freeze-2 > tbody > tr > td:nth-child(-n+2) {
+    position: sticky; z-index: 2; background: var(--bg);
+  }
+  .table-wrap table.grid.freeze-1 > thead > tr > th:first-child,
+  .table-wrap table.grid.freeze-1 > tbody > tr > td:first-child,
+  .table-wrap table.grid.freeze-2 > thead > tr > th:first-child,
+  .table-wrap table.grid.freeze-2 > tbody > tr > td:first-child { left: 0; }
+  /* 两列冻结:第 2 列的 left 必须等于第 1 列实宽,故把第 1 列钉成 --fz1 */
+  .table-wrap table.grid.freeze-2 > thead > tr > th:first-child,
+  .table-wrap table.grid.freeze-2 > tbody > tr > td:first-child {
+    width: var(--fz1); min-width: var(--fz1); max-width: var(--fz1);
+  }
+  .table-wrap table.grid.freeze-2 > thead > tr > th:nth-child(2),
+  .table-wrap table.grid.freeze-2 > tbody > tr > td:nth-child(2) { left: var(--fz1); }
+  /* 冻结区右缘画一条线,让"这几列不跟着滚"看得出来 */
+  .table-wrap table.grid.freeze-1 > thead > tr > th:first-child,
+  .table-wrap table.grid.freeze-1 > tbody > tr > td:first-child,
+  .table-wrap table.grid.freeze-2 > thead > tr > th:nth-child(2),
+  .table-wrap table.grid.freeze-2 > tbody > tr > td:nth-child(2) {
+    box-shadow: 1px 0 0 var(--line);
+  }
+  /* 悬停底色也要跟上,否则冻结列在 hover 行里是一块白 */
+  .table-wrap table.grid > tbody > tr:hover > td { background: var(--bg-2); }
+  /* 分店面板是整行 colspan,冻住它等于把整块钉死 */
+  .table-wrap table.grid > tbody > tr.branch-detail > td { position: static; }
+}

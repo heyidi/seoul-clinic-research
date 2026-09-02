@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>地图 · Seoul Beauty</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💆%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/leaflet/leaflet.css">
+<main>
+  <span class="eyebrow">江南区 · 位置总览</span>
+  <h1>诊所地图</h1>
+  <p class="lede muted">点击标记查看中/英/韩名称、认证印与评分;地图数据 © OpenStreetMap 贡献者。</p>
+  <div id="map"></div>
+</main>
+<script src="/assets/leaflet/leaflet.js"></script>
+<script src="/assets/app.js"></script>
+<script>
+(async () => {
+  await initPage("map");
+  const map = L.map("map").setView([37.5172, 127.0286], 13); // 江南区中心
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(map);
+  const clinics = (await fetchJSON("/api/clinics")).filter((c) => c.lat != null && c.lng != null);
+  const pts = [];
+  for (const c of clinics) {
+    const nv = c.latest_ratings.naver_map || {};
+    L.marker([c.lat, c.lng]).addTo(map).bindPopup(`
+      <div class="map-popup">
+        <span class="p-name">${esc(c.name_zh || c.slug)}</span> ${verifyBadge(c.verification_status)}<br>
+        <span class="muted">${esc(c.name_ko || "")} ${esc(c.name_en || "")}</span><br>
+        <span class="p-score">NAVER ${nv.score ?? "未获取"}</span> <span class="muted">(${nv.review_count ?? "—"}条)</span><br>
+        <span class="muted">${esc(c.address_zh || c.address_ko || "")}</span><br>
+        <a href="/clinic.html?slug=${encodeURIComponent(c.slug)}">查看详情 →</a>
+      </div>`);
+    pts.push([c.lat, c.lng]);
+  }
+  if (pts.length) map.fitBounds(pts, { padding: [40, 40], maxZoom: 15 });
+})();
+</script>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一键比价 · Seoul Beauty</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💆%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/style.css">
+<main class="compare-layout">
+  <aside class="tagtree" id="picker"><p class="muted">加载中…</p></aside>
+  <section class="results" id="results">
+    <span class="eyebrow">按项目规格 · 分层比价</span>
+    <h1>一键比价</h1>
+    <p class="lede muted">左侧勾选项目或具体规格;右侧按规格分组展示各家最新报价——上层为可直接比价的单项报价,下层为含该项目的套餐(橙色标注,永不混排)。</p>
+    <div id="sections"><p class="empty-hint">尚未勾选任何项目。试试勾选左侧的"肉毒素"或某个具体规格。</p></div>
+  </section>
+</main>
+<script src="/assets/app.js"></script>
+<script>
+(async () => {
+  await initPage("compare");
+  const [treatments, clinics] = await Promise.all([fetchJSON("/api/treatments"), fetchJSON("/api/clinics")]);
+  const meta = {};
+  for (const c of clinics) meta[c.slug] = c;
+
+  const picker = document.getElementById("picker");
+  const preset = new Set(((location.hash.match(/ids=([\d,]+)/) || [])[1] || "").split(",").filter(Boolean));
+
+  const byCat = {};
+  for (const t of treatments) {
+    (byCat[t.category] ??= {});
+    (byCat[t.category][t.treatment_zh] ??= []).push(t);
+  }
+  picker.innerHTML = Object.entries(byCat).map(([cat, groups]) => `
+    <div class="cat">${esc(cat)}</div>
+    ${Object.entries(groups).map(([name, vs]) => `
+      <div class="tnode tparent" data-group="${esc(name)}">
+        <label><input type="checkbox" class="parent"> <span>${esc(name)} <span class="kr">${esc(vs[0].treatment_ko || "")}</span></span></label>
+        <div class="vlist">
+          ${vs.map((v) => `<label class="vlabel"><input type="checkbox" class="child" value="${v.id}" ${preset.has(String(v.id)) ? "checked" : ""}> <span>${esc(v.variant_zh)} <span class="kr">${esc(v.variant_ko || "")}</span></span></label>`).join("")}
+        </div>
+      </div>`).join("")}`).join("");
+
+  function syncParents() {
+    for (const node of picker.querySelectorAll(".tparent")) {
+      const kids = [...node.querySelectorAll("input.child")];
+      const on = kids.filter((k) => k.checked).length;
+      const p = node.querySelector("input.parent");
+      p.checked = on === kids.length && kids.length > 0;
+      p.indeterminate = on > 0 && on < kids.length;
+    }
+  }
+  syncParents();
+
+  function clinicBadges(slug) {
+    const c = meta[slug];
+    if (!c) return "";
+    const spec = c.specialist_level === "specialist" ? '<span class="badge ok">专科医师</span>'
+      : c.specialist_level === "general" ? '<span class="badge">一般医师</span>'
+      : '<span class="badge">资质未标明</span>';
+    return `${verifyBadge(c.verification_status)} ${spec}`;
+  }
+  function clinicSignals(slug) {
+    const c = meta[slug];
+    if (!c) return "";
+    const nv = (c.latest_ratings || {}).naver_map || {};
+    const parts = [];
+    if (nv.review_count != null) parts.push(`NAVER ${Number(nv.review_count).toLocaleString("en-US")} 评`);
+    if (c.revisit_badge) parts.push("↺ 复诊多");
+    if (c.negative_review_count > 0) parts.push(`<span class="warn">⚠ ${c.negative_review_count} 条差评在档</span>`);
+    return parts.join(" · ");
+  }
+
+  const offerRow = (o, isPkg) => `
+    <div class="offer${isPkg ? " pkg-offer" : ""}">
+      <div class="offer-price">
+        <span class="amt">${fmtPrice(o.price_krw)}</span>
+        <span class="tag">${o.is_event_price ? '<span class="event">活动/体验价</span>' : '<span class="muted">标价</span>'}${isPkg ? ' <span class="badge pkg">套餐</span>' : ""}</span>
+      </div>
+      <div class="offer-main">
+        <div class="clinic-line">
+          <a href="/clinic.html?slug=${encodeURIComponent(o.clinic_slug)}">${esc(o.clinic_name_zh || o.clinic_slug)}</a>
+          ${clinicBadges(o.clinic_slug)}
+        </div>
+        <div class="signals">${clinicSignals(o.clinic_slug)}</div>
+        <div class="offer-name">${esc(o.raw_name_zh || "—")} <span class="kr">${esc(o.raw_name_ko || "")}</span></div>
+        ${isPkg && o.component_names && o.component_names.length ? `<div class="chips">${o.component_names.map((n) => `<span class="chip">${esc(n)}</span>`).join("")}</div>` : ""}
+        ${o.spec_notes ? `<div class="offer-notes muted">${esc(o.spec_notes)}</div>` : ""}
+      </div>
+      <div class="offer-srcline">${srcBadge(o.source_url, o.collected_at)}<br>${esc(o.collected_at)}</div>
+    </div>`;
+
+  const sections = document.getElementById("sections");
+  let seq = 0;
+  async function refresh() {
+    const my = ++seq;
+    const ids = [...picker.querySelectorAll("input.child:checked")].map((i) => i.value);
+    location.hash = ids.length ? `ids=${ids.join(",")}` : "";
+    if (!ids.length) { sections.innerHTML = '<p class="empty-hint">尚未勾选任何项目。试试勾选左侧的"肉毒素"或某个具体规格。</p>'; return; }
+    const data = await fetchJSON(`/api/compare?treatment_ids=${ids.join(",")}`);
+    if (my !== seq) return; // 丢弃过期响应
+    sections.innerHTML = data.map((block) => {
+      const t = block.treatment;
+      const single = block.offers.map((o) => offerRow(o, false)).join("");
+      const pkgs = (block.package_offers || []).map((o) => offerRow(o, true)).join("");
+      const prices = block.offers.map((o) => o.price_krw);
+      const range = prices.length
+        ? (prices.length === 1
+            ? `已收录实价 ${fmtPrice(prices[0])} · 1 家`
+            : `已收录实价区间 ${fmtPrice(Math.min(...prices))} — ${fmtPrice(Math.max(...prices))} · ${prices.length} 家`)
+        : "";
+      const avail = (block.available_no_price || []).map((c) =>
+        `<a class="chip" href="/clinic.html?slug=${encodeURIComponent(c.clinic_slug)}" title="${esc(c.offering_ko || "")}">${esc(c.clinic_name_zh || c.clinic_slug)}</a>`).join("");
+      return `<div class="vsection">
+        <h2>${esc(t.treatment_zh)} · ${esc(t.variant_zh)} <span class="kr">${esc(t.variant_ko || "")}</span></h2>
+        ${range ? `<div class="range-line">${range}<span class="muted"> · 价格为采集时点快照,以到店为准</span></div>` : ""}
+        <div class="strata-label">单项报价 · 可直接比价</div>
+        ${single || '<p class="empty-hint">暂无单项报价收录</p>'}
+        ${pkgs ? `<div class="strata-label"><span class="badge pkg">套餐</span> 含该项目的打包价 · 注意构成与发数差异,不与单项直接比</div>${pkgs}` : ""}
+        ${avail ? `<div class="strata-label">有该项目 · 价格未获取(据官网项目清单推断,点击看诊所档案)</div><div class="chips">${avail}</div>` : ""}
+      </div>`;
+    }).join("");
+  }
+  picker.addEventListener("change", (e) => {
+    if (e.target.classList.contains("parent")) {
+      const node = e.target.closest(".tparent");
+      for (const k of node.querySelectorAll("input.child")) k.checked = e.target.checked;
+    }
+    syncParents();
+    refresh();
+  });
+  await refresh();
+})();
+</script>
